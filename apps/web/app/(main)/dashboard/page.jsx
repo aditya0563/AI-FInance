@@ -1,5 +1,7 @@
 "use client";
-import { trpc } from "@/lib/trpc";
+import { useEffect, useState } from "react";
+import { getUserAccounts } from "@/actions/account";
+import { getUserTransactions } from "@/actions/transaction";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -8,12 +10,40 @@ import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
-  const { data: accounts, isLoading: accountsLoading } = trpc.account.getUserAccounts.useQuery();
-  const { data: transactions, isLoading: txLoading } = trpc.transaction.getTransactions.useQuery();
+  const [accounts, setAccounts] = useState(null);
+  const [transactions, setTransactions] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadDashboardData() {
+      try {
+        setIsLoading(true);
+        // Fetch data concurrently via Server Actions
+        const [accountsResponse, transactionsResponse] = await Promise.all([
+          getUserAccounts(),
+          getUserTransactions(),
+        ]);
+
+        if (accountsResponse?.success) {
+          setAccounts(accountsResponse.data);
+        }
+        
+        if (transactionsResponse?.success) {
+          setTransactions(transactionsResponse.data);
+        }
+      } catch (error) {
+        console.error("Failed to load dashboard data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadDashboardData();
+  }, []);
 
   const totalBalance = accounts?.reduce((sum, acc) => sum + Number(acc.balance), 0) || 0;
   
-  if (accountsLoading || txLoading) {
+  if (isLoading) {
     return (
       <div className="space-y-6 animate-pulse">
         <Skeleton className="h-10 w-48 rounded-md" />
@@ -90,7 +120,7 @@ export default function DashboardPage() {
             <CardTitle className="text-xl">Recent Transactions</CardTitle>
           </CardHeader>
           <CardContent className="flex-1 p-0 flex flex-col justify-center">
-            {transactions?.length === 0 ? (
+            {!transactions || transactions?.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
                 <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
                   <ReceiptText className="h-8 w-8 text-primary" />
@@ -107,6 +137,13 @@ export default function DashboardPage() {
               <div className="p-6">
                  {/* Transaction list would go here */}
                  <p className="text-sm text-muted-foreground">Transactions found: {transactions?.length}</p>
+                 <ul>
+                    {transactions.slice(0, 5).map(tx => (
+                      <li key={tx.id} className="py-2 border-b last:border-0 border-border/10">
+                        {tx.description} - ${tx.amount}
+                      </li>
+                    ))}
+                  </ul>
               </div>
             )}
           </CardContent>
