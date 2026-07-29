@@ -12,7 +12,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function DashboardPage() {
   const [accounts, setAccounts] = useState(null);
   const [transactions, setTransactions] = useState(null);
+  const [nextCursor, setNextCursor] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   useEffect(() => {
     async function loadDashboardData() {
@@ -21,7 +23,7 @@ export default function DashboardPage() {
         // Fetch data concurrently via Server Actions
         const [accountsResponse, transactionsResponse] = await Promise.all([
           getUserAccounts(),
-          getUserTransactions(),
+          getUserTransactions(null, 10),
         ]);
 
         if (accountsResponse?.success) {
@@ -29,7 +31,8 @@ export default function DashboardPage() {
         }
         
         if (transactionsResponse?.success) {
-          setTransactions(transactionsResponse.data);
+          setTransactions(transactionsResponse.data.transactions);
+          setNextCursor(transactionsResponse.data.nextCursor);
         }
       } catch (error) {
         console.error("Failed to load dashboard data:", error);
@@ -40,6 +43,22 @@ export default function DashboardPage() {
 
     loadDashboardData();
   }, []);
+
+  const loadMoreTransactions = async () => {
+    if (!nextCursor || isLoadingMore) return;
+    try {
+      setIsLoadingMore(true);
+      const response = await getUserTransactions(nextCursor, 10);
+      if (response?.success) {
+        setTransactions((prev) => [...(prev || []), ...response.data.transactions]);
+        setNextCursor(response.data.nextCursor);
+      }
+    } catch (error) {
+      console.error("Failed to load more transactions:", error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
 
   const totalBalance = accounts?.reduce((sum, acc) => sum + Number(acc.balance), 0) || 0;
   
@@ -136,14 +155,21 @@ export default function DashboardPage() {
             ) : (
               <div className="p-6">
                  {/* Transaction list would go here */}
-                 <p className="text-sm text-muted-foreground">Transactions found: {transactions?.length}</p>
+                 <p className="text-sm text-muted-foreground">Transactions loaded: {transactions?.length}</p>
                  <ul>
-                    {transactions.slice(0, 5).map(tx => (
+                    {transactions.map(tx => (
                       <li key={tx.id} className="py-2 border-b last:border-0 border-border/10">
                         {tx.description} - ${tx.amount}
                       </li>
                     ))}
                   </ul>
+                  {nextCursor && (
+                    <div className="mt-6 flex justify-center">
+                      <Button variant="outline" onClick={loadMoreTransactions} disabled={isLoadingMore} className="rounded-full">
+                        {isLoadingMore ? "Loading..." : "Load More"}
+                      </Button>
+                    </div>
+                  )}
               </div>
             )}
           </CardContent>
