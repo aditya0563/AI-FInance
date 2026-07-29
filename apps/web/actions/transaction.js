@@ -19,14 +19,14 @@ export async function getUserTransactions(cursor = null, limit = 10) {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
 
-    const user = await db.user.findUnique({
-      where: { clerkUserId: userId },
+    const user = await db.user.findFirst({
+      where: { clerkUserId: userId, deletedAt: null },
     });
 
     if (!user) throw new Error("User not found");
 
     const queryOptions = {
-      where: { userId: user.id },
+      where: { userId: user.id, deletedAt: null },
       orderBy: { date: "desc" },
       take: limit + 1, // Fetch one extra to determine if there are more
     };

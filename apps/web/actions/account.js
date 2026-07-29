@@ -9,8 +9,8 @@ export async function updateDefaultAccount(accountId) {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
 
-    const user = await db.user.findUnique({
-      where: { clerkUserId: userId },
+    const user = await db.user.findFirst({
+      where: { clerkUserId: userId, deletedAt: null },
     });
 
     if (!user) {
@@ -22,6 +22,7 @@ export async function updateDefaultAccount(accountId) {
       where: {
         userId: user.id,
         isDefault: true,
+        deletedAt: null,
       },
       data: { isDefault: false },
     });
@@ -31,6 +32,7 @@ export async function updateDefaultAccount(accountId) {
       where: {
         id: accountId,
         userId: user.id,
+        deletedAt: null,
       },
       data: { isDefault: true },
     });

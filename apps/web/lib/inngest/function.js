@@ -25,10 +25,11 @@ export const processRecurringTransaction = inngest.createFunction(
     }
 
     await step.run("process-transaction", async () => {
-      const transaction = await db.transaction.findUnique({
+      const transaction = await db.transaction.findFirst({
         where: {
           id: event.data.transactionId,
           userId: event.data.userId,
+          deletedAt: null,
         },
         include: {
           account: true,
@@ -95,6 +96,7 @@ export const triggerRecurringTransactions = inngest.createFunction(
           where: {
             isRecurring: true,
             status: "COMPLETED",
+            deletedAt: null,
             OR: [
               { lastProcessed: null },
               {
@@ -174,7 +176,8 @@ export const generateMonthlyReports = inngest.createFunction(
   async ({ step }) => {
     const users = await step.run("fetch-users", async () => {
       return await db.user.findMany({
-        include: { accounts: true },
+        where: { deletedAt: null },
+        include: { accounts: { where: { deletedAt: null } } },
       });
     });
 
@@ -218,12 +221,14 @@ export const checkBudgetAlerts = inngest.createFunction(
   async ({ step }) => {
     const budgets = await step.run("fetch-budgets", async () => {
       return await db.budget.findMany({
+        where: { deletedAt: null, user: { deletedAt: null } },
         include: {
           user: {
             include: {
               accounts: {
                 where: {
                   isDefault: true,
+                  deletedAt: null,
                 },
               },
             },
@@ -246,6 +251,7 @@ export const checkBudgetAlerts = inngest.createFunction(
             userId: budget.userId,
             accountId: defaultAccount.id, // Only consider default account
             type: "EXPENSE",
+            deletedAt: null,
             date: {
               gte: startDate,
             },
@@ -319,6 +325,7 @@ async function getMonthlyStats(userId, month) {
   const transactions = await db.transaction.findMany({
     where: {
       userId,
+      deletedAt: null,
       date: {
         gte: startDate,
         lte: endDate,
