@@ -3,6 +3,11 @@
 import { db } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
+
+const updateBudgetSchema = z.object({
+  amount: z.number().positive("Budget amount must be a positive number"),
+});
 
 export async function getCurrentBudget(accountId) {
   try {
@@ -67,6 +72,11 @@ export async function updateBudget(amount) {
   try {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
+
+    const validated = updateBudgetSchema.safeParse({ amount });
+    if (!validated.success) {
+      throw new Error("Invalid budget amount: " + validated.error.issues[0].message);
+    }
 
     const user = await db.user.findUnique({
       where: { clerkUserId: userId },
