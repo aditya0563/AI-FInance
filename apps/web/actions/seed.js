@@ -3,9 +3,6 @@
 import { db } from "@/lib/prisma";
 import { subDays } from "date-fns";
 
-const ACCOUNT_ID = "account-id";
-const USER_ID = "user-id";
-
 // Categories with their typical amount ranges
 const CATEGORIES = {
   INCOME: [
@@ -43,9 +40,42 @@ function getRandomCategory(type) {
 
 export async function seedTransactions() {
   try {
+    // Dynamically fetch or create a test user
+    let user = await db.user.findFirst();
+    if (!user) {
+      user = await db.user.create({
+        data: {
+          clerkUserId: "test_clerk_id_" + crypto.randomUUID(),
+          email: "test@example.com",
+          name: "Test User",
+          imageUrl: "https://example.com/avatar.png",
+        },
+      });
+    }
+
+    // Dynamically fetch or create an account for the user
+    let account = await db.account.findFirst({
+      where: { userId: user.id },
+    });
+
+    if (!account) {
+      account = await db.account.create({
+        data: {
+          userId: user.id,
+          name: "Seed Account",
+          type: "CURRENT",
+          balance: 0,
+          isDefault: true,
+        },
+      });
+    }
+
+    const ACCOUNT_ID = account.id;
+    const USER_ID = user.id;
+
     // Generate 90 days of transactions
     const transactions = [];
-    let totalBalance = 0;
+    let totalBalance = account.balance ? Number(account.balance) : 0;
 
     for (let i = 90; i >= 0; i--) {
       const date = subDays(new Date(), i);
@@ -81,7 +111,7 @@ export async function seedTransactions() {
 
     // Insert transactions in batches and update account balance
     await db.$transaction(async (tx) => {
-      // Clear existing transactions
+      // Clear existing transactions for this seed account
       await tx.transaction.deleteMany({
         where: { accountId: ACCOUNT_ID },
       });
