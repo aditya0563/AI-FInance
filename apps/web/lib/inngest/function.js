@@ -3,6 +3,7 @@ import { db } from "@/lib/prisma";
 import EmailTemplate from "@/emails/template";
 import { sendEmail } from "@/actions/send-email";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { calculateNextRecurringDate } from "@/lib/utils";
 
 // 1. Recurring Transaction Processing with Throttling
 export const processRecurringTransaction = inngest.createFunction(
@@ -272,8 +273,8 @@ export const checkBudgetAlerts = inngest.createFunction(
               type: "budget-alert",
               data: {
                 percentageUsed,
-                budgetAmount: parseInt(budgetAmount).toFixed(1),
-                totalExpenses: parseInt(totalExpenses).toFixed(1),
+                budgetAmount: Number(budgetAmount).toFixed(1),
+                totalExpenses: Number(totalExpenses).toFixed(1),
                 accountName: defaultAccount.name,
               },
             }),
@@ -309,24 +310,7 @@ function isTransactionDue(transaction) {
   return nextDue <= today;
 }
 
-function calculateNextRecurringDate(date, interval) {
-  const next = new Date(date);
-  switch (interval) {
-    case "DAILY":
-      next.setDate(next.getDate() + 1);
-      break;
-    case "WEEKLY":
-      next.setDate(next.getDate() + 7);
-      break;
-    case "MONTHLY":
-      next.setMonth(next.getMonth() + 1);
-      break;
-    case "YEARLY":
-      next.setFullYear(next.getFullYear() + 1);
-      break;
-  }
-  return next;
-}
+
 
 async function getMonthlyStats(userId, month) {
   const startDate = new Date(month.getFullYear(), month.getMonth(), 1);

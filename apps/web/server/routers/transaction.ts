@@ -2,16 +2,7 @@ import { z } from 'zod';
 import { router, protectedProcedure } from '../trpc';
 import { TRPCError } from '@trpc/server';
 
-function calculateNextRecurringDate(startDate: Date, interval: string) {
-  const date = new Date(startDate);
-  switch (interval) {
-    case 'DAILY': date.setDate(date.getDate() + 1); break;
-    case 'WEEKLY': date.setDate(date.getDate() + 7); break;
-    case 'MONTHLY': date.setMonth(date.getMonth() + 1); break;
-    case 'YEARLY': date.setFullYear(date.getFullYear() + 1); break;
-  }
-  return date;
-}
+import { calculateNextRecurringDate } from '@/lib/utils';
 
 export const transactionRouter = router({
   getTransactions: protectedProcedure
