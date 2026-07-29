@@ -1,7 +1,7 @@
 import { initTRPC, TRPCError } from '@trpc/server';
 import { auth } from '@clerk/nextjs/server';
 import superjson from 'superjson';
-import { db } from '@/db';
+import { db } from '@/lib/prisma';
 
 export const createContext = async () => {
   const { userId } = await auth();
@@ -52,8 +52,8 @@ const isAdmin = t.middleware(async ({ ctx, next }) => {
     throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not authenticated' });
   }
 
-  const user = await ctx.db.query.users.findFirst({
-    where: (users, { eq }) => eq(users.clerkUserId, ctx.userId),
+  const user = await ctx.db.user.findUnique({
+    where: { clerkUserId: ctx.userId },
   });
 
   if (!user || user.role !== 'admin') {
