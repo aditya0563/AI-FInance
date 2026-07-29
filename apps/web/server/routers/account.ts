@@ -1,21 +1,54 @@
 import { z } from 'zod';
 import { router, protectedProcedure } from '../trpc';
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
-import { accounts } from '@/db/schema';
 
 export const accountRouter = router({
   getUserAccounts: protectedProcedure
     .query(async ({ ctx }) => {
-      const user = await ctx.db.query.users.findFirst({
-        where: (users, { eq }) => eq(users.clerkUserId, ctx.userId),
+      const user = await ctx.db.user.findUnique({
+        where: { clerkUserId: ctx.userId },
       });
       if (!user) throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
 
-      return await ctx.db.query.accounts.findMany({
-        where: eq(accounts.userId, user.id),
-        orderBy: (accounts, { desc }) => [desc(accounts.createdAt)],
+      return await ctx.db.account.findMany({
+        where: { userId: user.id },
+        orderBy: { createdAt: 'desc' },
       });
+    }),
+
+  getAccountWithTransactions: protectedProcedure
+    .input(z.object({ accountId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const user = await ctx.db.user.findUnique({
+        where: { clerkUserId: ctx.userId },
+      });
+      if (!user) throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
+
+      const account = await ctx.db.account.findUnique({
+        where: {
+          id: input.accountId,
+          userId: user.id,
+        },
+        include: {
+          transactions: {
+            orderBy: { date: 'desc' },
+          },
+          _count: {
+            select: { transactions: true },
+          },
+        },
+      });
+
+      if (!account) return null;
+
+      return {
+        ...account,
+        balance: account.balance.toNumber(),
+        transactions: account.transactions.map((tx: any) => ({
+          ...tx,
+          amount: tx.amount.toNumber(),
+        })),
+      };
     }),
 
   createAccount: protectedProcedure
@@ -26,29 +59,57 @@ export const accountRouter = router({
       isDefault: z.boolean().default(false),
     }))
     .mutation(async ({ ctx, input }) => {
-      const user = await ctx.db.query.users.findFirst({
-        where: (users, { eq }) => eq(users.clerkUserId, ctx.userId),
+      const user = await ctx.db.user.findUnique({
+        where: { clerkUserId: ctx.userId },
       });
       if (!user) throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
 
-      return await ctx.db.transaction(async (tx) => {
+      return await ctx.db.$transaction(async (tx) => {
         if (input.isDefault) {
-          await tx.update(accounts)
-            .set({ isDefault: false })
-            .where(eq(accounts.userId, user.id));
+          await tx.account.updateMany({
+            where: { userId: user.id },
+            data: { isDefault: false },
+          });
         }
 
-        const [newAccount] = await tx.insert(accounts)
-          .values({
+        return await tx.account.create({
+          data: {
             name: input.name,
             type: input.type,
-            balance: String(input.balance),
+            balance: input.balance,
             isDefault: input.isDefault,
             userId: user.id,
-          })
-          .returning();
-
-        return newAccount;
+          },
+        });
       });
+    }),
+
+  updateDefaultAccount: protectedProcedure
+    .input(z.object({ accountId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const user = await ctx.db.user.findUnique({
+        where: { clerkUserId: ctx.userId },
+      });
+      if (!user) throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
+
+      await ctx.db.$transaction([
+        ctx.db.account.updateMany({
+          where: { userId: user.id, isDefault: true },
+          data: { isDefault: false },
+        }),
+        ctx.db.account.update({
+          where: { id: input.accountId, userId: user.id },
+          data: { isDefault: true },
+        }),
+      ]);
+
+      const updatedAccount = await ctx.db.account.findUnique({
+        where: { id: input.accountId },
+      });
+
+      return {
+        ...updatedAccount,
+        balance: updatedAccount?.balance?.toNumber(),
+      };
     }),
 });
