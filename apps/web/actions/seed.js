@@ -41,9 +41,7 @@ function getRandomCategory(type) {
 export async function seedTransactions() {
   try {
     // Dynamically fetch or create a test user
-    let user = await db.user.findFirst({
-      where: { deletedAt: null },
-    });
+    let user = await db.user.findFirst();
     if (!user) {
       user = await db.user.create({
         data: {
@@ -57,7 +55,7 @@ export async function seedTransactions() {
 
     // Dynamically fetch or create an account for the user
     let account = await db.account.findFirst({
-      where: { userId: user.id, deletedAt: null },
+      where: { userId: user.id },
     });
 
     if (!account) {
@@ -114,9 +112,8 @@ export async function seedTransactions() {
     // Insert transactions in batches and update account balance
     await db.$transaction(async (tx) => {
       // Clear existing transactions for this seed account
-      await tx.transaction.updateMany({
-        where: { accountId: ACCOUNT_ID, deletedAt: null },
-        data: { deletedAt: new Date() },
+      await tx.transaction.deleteMany({
+        where: { accountId: ACCOUNT_ID },
       });
 
       // Insert new transactions

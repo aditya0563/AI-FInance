@@ -7,8 +7,8 @@ export async function checkAdmin() {
     throw new Error("Unauthorized");
   }
 
-  const user = await db.user.findFirst({
-    where: { clerkUserId: userId, deletedAt: null },
+  const user = await db.user.findUnique({
+    where: { clerkUserId: userId },
   });
 
   if (!user || user.role !== "admin") {

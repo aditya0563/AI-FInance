@@ -9,8 +9,8 @@ export default async function AdminDashboard() {
     redirect("/sign-in");
   }
 
-  const user = await db.user.findFirst({
-    where: { clerkUserId: userId, deletedAt: null },
+  const user = await db.user.findUnique({
+    where: { clerkUserId: userId },
   });
 
   if (user?.role !== "admin") {

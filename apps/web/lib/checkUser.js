@@ -9,10 +9,9 @@ export const checkUser = async () => {
   }
 
   try {
-    const loggedInUser = await db.user.findFirst({
+    const loggedInUser = await db.user.findUnique({
       where: {
         clerkUserId: user.id,
-        deletedAt: null,
       },
     });
 
