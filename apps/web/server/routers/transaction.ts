@@ -39,6 +39,17 @@ export const transactionRouter = router({
       });
       if (!user) throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
 
+      const account = await ctx.db.query.accounts.findFirst({
+        where: (accounts, { eq, and }) => and(
+          eq(accounts.id, input.accountId),
+          eq(accounts.userId, user.id)
+        ),
+      });
+
+      if (!account) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Unauthorized account access' });
+      }
+
       const balanceChange = input.type === 'EXPENSE' ? -input.amount : input.amount;
 
       return await ctx.db.transaction(async (tx) => {

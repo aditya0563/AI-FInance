@@ -3,6 +3,8 @@
 import { db } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
+import aj from "@/lib/arcjet";
+import { request } from "@arcjet/next";
 
 const serializeDecimal = (obj) => {
   const serialized = { ...obj };
@@ -18,6 +20,10 @@ const serializeDecimal = (obj) => {
 export async function getAccountWithTransactions(accountId) {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
+
+  const req = await request();
+  const decision = await aj.protect(req, { userId, requested: 1 });
+  if (decision.isDenied()) throw new Error("Rate limit exceeded");
 
   const user = await db.user.findUnique({
     where: { clerkUserId: userId },
@@ -52,6 +58,13 @@ export async function bulkDeleteTransactions(transactionIds) {
   try {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
+
+    const req = await request();
+    const decision = await aj.protect(req, { userId, requested: 1 });
+
+    if (decision.isDenied()) {
+      throw new Error("Too many requests. Please try again later.");
+    }
 
     const user = await db.user.findUnique({
       where: { clerkUserId: userId },
@@ -143,7 +156,7 @@ export async function updateDefaultAccount(accountId) {
     });
 
     revalidatePath("/dashboard");
-    return { success: true, data: serializeTransaction(account) };
+    return { success: true, data: serializeDecimal(account) };
   } catch (error) {
     return { success: false, error: error.message };
   }

@@ -117,7 +117,8 @@ export async function createAccount(data) {
     // Create new account
     const account = await db.account.create({
       data: {
-        ...data,
+        name: data.name,
+        type: data.type,
         balance: balanceFloat,
         userId: user.id,
         isDefault: shouldBeDefault, // Override the isDefault based on our logic

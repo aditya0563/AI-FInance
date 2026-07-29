@@ -2,7 +2,11 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from './schema';
 
-const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/postgres?schema=public';
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL is missing');
+}
+
+const connectionString = process.env.DATABASE_URL;
 
 // Singleton pattern to avoid exhausting max connections during Next.js hot-reloading
 const globalForDb = globalThis as unknown as {

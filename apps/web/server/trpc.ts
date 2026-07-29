@@ -23,10 +23,21 @@ const t = initTRPC.context<Context>().create({
 export const router = t.router;
 export const publicProcedure = t.procedure;
 
-const isAuthed = t.middleware(({ ctx, next }) => {
+import aj from '@/lib/arcjet';
+import { request } from '@arcjet/next';
+
+const isAuthed = t.middleware(async ({ ctx, next }) => {
   if (!ctx.userId) {
     throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not authenticated' });
   }
+
+  const req = await request();
+  const decision = await aj.protect(req, { userId: ctx.userId, requested: 1 });
+  
+  if (decision.isDenied()) {
+    throw new TRPCError({ code: 'TOO_MANY_REQUESTS', message: 'Rate limit exceeded' });
+  }
+
   return next({
     ctx: {
       userId: ctx.userId,
@@ -35,3 +46,25 @@ const isAuthed = t.middleware(({ ctx, next }) => {
 });
 
 export const protectedProcedure = t.procedure.use(isAuthed);
+
+const isAdmin = t.middleware(async ({ ctx, next }) => {
+  if (!ctx.userId) {
+    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not authenticated' });
+  }
+
+  const user = await ctx.db.query.users.findFirst({
+    where: (users, { eq }) => eq(users.clerkUserId, ctx.userId),
+  });
+
+  if (!user || user.role !== 'admin') {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Admin access required' });
+  }
+
+  return next({
+    ctx: {
+      userId: ctx.userId,
+    },
+  });
+});
+
+export const adminProcedure = t.procedure.use(isAdmin);

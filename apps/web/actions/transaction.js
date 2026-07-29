@@ -73,7 +73,15 @@ export async function createTransaction(data) {
     const transaction = await db.$transaction(async (tx) => {
       const newTransaction = await tx.transaction.create({
         data: {
-          ...data,
+          accountId: data.accountId,
+          type: data.type,
+          amount: data.amount,
+          description: data.description,
+          date: data.date,
+          category: data.category,
+          receiptUrl: data.receiptUrl,
+          isRecurring: data.isRecurring,
+          recurringInterval: data.recurringInterval,
           userId: user.id,
           nextRecurringDate:
             data.isRecurring && data.recurringInterval
@@ -125,6 +133,10 @@ export async function updateTransaction(id, data) {
   try {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
+
+    const req = await request();
+    const decision = await aj.protect(req, { userId, requested: 1 });
+    if (decision.isDenied()) throw new Error("Too Many Requests");
 
     const user = await db.user.findUnique({
       where: { clerkUserId: userId },
@@ -200,6 +212,10 @@ export async function getUserTransactions(query = {}) {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
 
+    const req = await request();
+    const decision = await aj.protect(req, { userId, requested: 1 });
+    if (decision.isDenied()) throw new Error("Rate limit exceeded");
+
     const user = await db.user.findUnique({
       where: { clerkUserId: userId },
     });
@@ -208,10 +224,14 @@ export async function getUserTransactions(query = {}) {
       throw new Error("User not found");
     }
 
+    const allowedQuery = {};
+    if (query.accountId) allowedQuery.accountId = query.accountId;
+    if (query.type) allowedQuery.type = query.type;
+
     const transactions = await db.transaction.findMany({
       where: {
+        ...allowedQuery,
         userId: user.id,
-        ...query,
       },
       include: {
         account: true,
@@ -230,6 +250,28 @@ export async function getUserTransactions(query = {}) {
 // Scan Receipt
 export async function scanReceipt(file) {
   try {
+    const { userId } = await auth();
+    if (!userId) throw new Error("Unauthorized");
+
+    const req = await request();
+    const decision = await aj.protect(req, {
+      userId,
+      requested: 1,
+    });
+
+    if (decision.isDenied()) {
+      throw new Error("Rate limit exceeded for scanReceipt");
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error("File size exceeds maximum limit of 5MB");
+    }
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      throw new Error("Invalid file type. Only JPEG, PNG, and WebP are allowed.");
+    }
+
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     // Convert File to ArrayBuffer

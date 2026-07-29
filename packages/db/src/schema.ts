@@ -13,6 +13,7 @@ export const users = pgTable('users', {
   clerkUserId: text('clerkUserId').unique().notNull(),
   email: text('email').unique().notNull(),
   name: text('name'),
+  role: text('role').default('user').notNull(),
   imageUrl: text('imageUrl'),
   createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
   updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().$onUpdate(() => new Date()).notNull(),
