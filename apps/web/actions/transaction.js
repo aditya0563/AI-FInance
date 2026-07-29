@@ -134,6 +134,10 @@ export async function updateTransaction(id, data) {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
 
+    const req = await request();
+    const decision = await aj.protect(req, { userId, requested: 1 });
+    if (decision.isDenied()) throw new Error("Too Many Requests");
+
     const user = await db.user.findUnique({
       where: { clerkUserId: userId },
     });
