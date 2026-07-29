@@ -34,7 +34,10 @@ export async function sendEmail({ to, subject, react }) {
     throw new Error("Invalid input fields: " + validatedFields.error.message);
   }
 
-  const resend = new Resend(process.env.RESEND_API_KEY || "");
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error("RESEND_API_KEY is missing");
+  }
+  const resend = new Resend(process.env.RESEND_API_KEY);
 
   try {
     const data = await resend.emails.send({
