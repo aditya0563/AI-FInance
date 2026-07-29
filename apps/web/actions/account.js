@@ -21,6 +21,10 @@ export async function getAccountWithTransactions(accountId) {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
 
+  const req = await request();
+  const decision = await aj.protect(req, { userId, requested: 1 });
+  if (decision.isDenied()) throw new Error("Rate limit exceeded");
+
   const user = await db.user.findUnique({
     where: { clerkUserId: userId },
   });

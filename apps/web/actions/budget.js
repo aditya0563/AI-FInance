@@ -5,6 +5,9 @@ import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import aj from "@/lib/arcjet";
+import { request } from "@arcjet/next";
+
 const updateBudgetSchema = z.object({
   amount: z.number().positive("Budget amount must be a positive number"),
 });
@@ -72,6 +75,10 @@ export async function updateBudget(amount) {
   try {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
+
+    const req = await request();
+    const decision = await aj.protect(req, { userId, requested: 1 });
+    if (decision.isDenied()) throw new Error("Rate limit exceeded");
 
     const validated = updateBudgetSchema.safeParse({ amount });
     if (!validated.success) {

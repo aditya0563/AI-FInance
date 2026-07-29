@@ -73,7 +73,15 @@ export async function createTransaction(data) {
     const transaction = await db.$transaction(async (tx) => {
       const newTransaction = await tx.transaction.create({
         data: {
-          ...data,
+          accountId: data.accountId,
+          type: data.type,
+          amount: data.amount,
+          description: data.description,
+          date: data.date,
+          category: data.category,
+          receiptUrl: data.receiptUrl,
+          isRecurring: data.isRecurring,
+          recurringInterval: data.recurringInterval,
           userId: user.id,
           nextRecurringDate:
             data.isRecurring && data.recurringInterval
@@ -199,6 +207,10 @@ export async function getUserTransactions(query = {}) {
   try {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
+
+    const req = await request();
+    const decision = await aj.protect(req, { userId, requested: 1 });
+    if (decision.isDenied()) throw new Error("Rate limit exceeded");
 
     const user = await db.user.findUnique({
       where: { clerkUserId: userId },
