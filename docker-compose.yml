@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      # Pass database URL so Prisma can connect to the postgres container
+      - DATABASE_URL=postgresql://ai_finance_user:ai_finance_password@db:5432/ai_finance_db?schema=public
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  db:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=ai_finance_user
+      - POSTGRES_PASSWORD=ai_finance_password
+      - POSTGRES_DB=ai_finance_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  pgdata:
