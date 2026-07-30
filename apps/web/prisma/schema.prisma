@@ -20,6 +20,7 @@ model User {
   budgets       Budget[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+  deletedAt     DateTime?
 
   @@map("users")
 }
@@ -31,10 +32,11 @@ model Account {
   balance      Decimal       @default(0) // will ask inital balance while creating an account
   isDefault    Boolean       @default(false)
   userId       String
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id])
   transactions Transaction[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+  deletedAt    DateTime?
 
   @@index([userId])
   @@map("accounts")
@@ -54,14 +56,17 @@ model Transaction {
   lastProcessed    DateTime?         // Last time this recurring transaction was processed
   status           TransactionStatus  @default(COMPLETED)
   userId           String
-  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User              @relation(fields: [userId], references: [id])
   accountId        String
-  account          Account           @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  account          Account           @relation(fields: [accountId], references: [id])
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
+  deletedAt        DateTime?
 
   @@index([userId])
   @@index([accountId])
+  @@index([userId, date])
+  @@index([userId, type])
   @@map("transactions")
 }
 
@@ -71,9 +76,10 @@ model Budget {
   amount      Decimal
   lastAlertSent DateTime?  // Track when the last alert was sent
   userId      String       @unique
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [userId], references: [id])
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
 
   @@index([userId])
   @@map("budgets")

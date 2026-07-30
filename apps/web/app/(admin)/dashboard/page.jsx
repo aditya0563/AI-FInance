@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { db } from "@/db";
+import { db } from "@/lib/prisma";
 
 export default async function AdminDashboard() {
   const { userId } = await auth();
@@ -9,8 +9,8 @@ export default async function AdminDashboard() {
     redirect("/sign-in");
   }
 
-  const user = await db.query.users.findFirst({
-    where: (users, { eq }) => eq(users.clerkUserId, userId),
+  const user = await db.user.findUnique({
+    where: { clerkUserId: userId },
   });
 
   if (user?.role !== "admin") {
