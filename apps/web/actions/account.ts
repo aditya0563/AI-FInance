@@ -4,17 +4,19 @@ import { revalidatePath } from "next/cache";
 
 import { serializeDecimal } from "@/lib/utils";
 
-export async function updateDefaultAccount(accountId) {
+export async function updateDefaultAccount(
+  accountId: string
+): Promise<{ success: boolean; data?: any; error?: string }> {
   try {
     const { userId } = await auth();
-    if (!userId) throw new Error("Unauthorized");
+    if (!userId) return { success: false, error: "Unauthorized" };
 
     const user = await db.user.findUnique({
       where: { clerkUserId: userId },
     });
 
     if (!user) {
-      throw new Error("User not found");
+      return { success: false, error: "User not found" };
     }
 
     // First, unset any existing default account
@@ -37,7 +39,8 @@ export async function updateDefaultAccount(accountId) {
 
     revalidatePath("/dashboard");
     return { success: true, data: serializeDecimal(account) };
-  } catch (error) {
-    return { success: false, error: error.message };
+  } catch (error: any) {
+    console.error("updateDefaultAccount error:", error);
+    return { success: false, error: "An unexpected error occurred while updating the default account." };
   }
 }

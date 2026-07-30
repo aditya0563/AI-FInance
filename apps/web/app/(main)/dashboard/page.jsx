@@ -18,27 +18,27 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function loadDashboardData() {
-      try {
-        setIsLoading(true);
-        // Fetch data concurrently via Server Actions
-        const [accountsResponse, transactionsResponse] = await Promise.all([
-          getUserAccounts(),
-          getUserTransactions(null, 10),
-        ]);
+      setIsLoading(true);
+      // Fetch data concurrently via Server Actions
+      const [accountsResponse, transactionsResponse] = await Promise.all([
+        getUserAccounts(),
+        getUserTransactions(null, 10),
+      ]);
 
-        if (accountsResponse?.success) {
-          setAccounts(accountsResponse.data);
-        }
-        
-        if (transactionsResponse?.success) {
-          setTransactions(transactionsResponse.data.transactions);
-          setNextCursor(transactionsResponse.data.nextCursor);
-        }
-      } catch (error) {
-        console.error("Failed to load dashboard data:", error);
-      } finally {
-        setIsLoading(false);
+      if (accountsResponse?.success) {
+        setAccounts(accountsResponse.data);
+      } else if (accountsResponse) {
+        console.error("Failed to load accounts:", accountsResponse.error);
       }
+      
+      if (transactionsResponse?.success) {
+        setTransactions(transactionsResponse.data.transactions);
+        setNextCursor(transactionsResponse.data.nextCursor);
+      } else if (transactionsResponse) {
+        console.error("Failed to load transactions:", transactionsResponse.error);
+      }
+      
+      setIsLoading(false);
     }
 
     loadDashboardData();
@@ -46,18 +46,15 @@ export default function DashboardPage() {
 
   const loadMoreTransactions = async () => {
     if (!nextCursor || isLoadingMore) return;
-    try {
-      setIsLoadingMore(true);
-      const response = await getUserTransactions(nextCursor, 10);
-      if (response?.success) {
-        setTransactions((prev) => [...(prev || []), ...response.data.transactions]);
-        setNextCursor(response.data.nextCursor);
-      }
-    } catch (error) {
-      console.error("Failed to load more transactions:", error);
-    } finally {
-      setIsLoadingMore(false);
+    setIsLoadingMore(true);
+    const response = await getUserTransactions(nextCursor, 10);
+    if (response?.success) {
+      setTransactions((prev) => [...(prev || []), ...response.data.transactions]);
+      setNextCursor(response.data.nextCursor);
+    } else if (response) {
+      console.error("Failed to load more transactions:", response.error);
     }
+    setIsLoadingMore(false);
   };
 
   const totalBalance = accounts?.reduce((sum, acc) => sum + Number(acc.balance), 0) || 0;

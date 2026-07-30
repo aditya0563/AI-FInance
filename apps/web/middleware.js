@@ -1,6 +1,7 @@
 import arcjet, { createMiddleware, detectBot, shield } from "@arcjet/next";
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { env } from "@/lib/env";
 
 const isProtectedRoute = createRouteMatcher([
   "/dashboard(.*)",
@@ -10,7 +11,7 @@ const isProtectedRoute = createRouteMatcher([
 
 // Create Arcjet middleware
 const aj = arcjet({
-  key: process.env.ARCJET_KEY,
+  key: env.ARCJET_KEY,
   // characteristics: ["userId"], // Track based on Clerk userId
   rules: [
     // Shield protection for content and security

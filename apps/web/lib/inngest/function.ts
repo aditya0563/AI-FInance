@@ -4,6 +4,7 @@ import EmailTemplate from "@/emails/template";
 import { sendEmail } from "@/actions/send-email";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { calculateNextRecurringDate } from "@/lib/utils";
+import { env } from "@/lib/env";
 
 // 1. Recurring Transaction Processing with Throttling
 export const processRecurringTransaction = inngest.createFunction(
@@ -127,8 +128,8 @@ export const triggerRecurringTransactions = inngest.createFunction(
 );
 
 // 2. Monthly Report Generation
-async function generateFinancialInsights(stats, month) {
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+async function generateFinancialInsights(stats: any, month: string): Promise<string[]> {
+  const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY!);
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   const prompt = `
@@ -291,7 +292,7 @@ export const checkBudgetAlerts = inngest.createFunction(
   }
 );
 
-function isNewMonth(lastAlertDate, currentDate) {
+function isNewMonth(lastAlertDate: Date, currentDate: Date): boolean {
   return (
     lastAlertDate.getMonth() !== currentDate.getMonth() ||
     lastAlertDate.getFullYear() !== currentDate.getFullYear()
@@ -299,7 +300,7 @@ function isNewMonth(lastAlertDate, currentDate) {
 }
 
 // Utility functions
-function isTransactionDue(transaction) {
+function isTransactionDue(transaction: any): boolean {
   // If no lastProcessed date, transaction is due
   if (!transaction.lastProcessed) return true;
 
@@ -312,7 +313,7 @@ function isTransactionDue(transaction) {
 
 
 
-async function getMonthlyStats(userId, month) {
+async function getMonthlyStats(userId: string, month: Date): Promise<any> {
   const startDate = new Date(month.getFullYear(), month.getMonth(), 1);
   const endDate = new Date(month.getFullYear(), month.getMonth() + 1, 0);
 

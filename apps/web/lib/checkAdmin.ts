@@ -1,7 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/prisma";
+import { User } from "@prisma/client";
 
-export async function checkAdmin() {
+export async function checkAdmin(): Promise<User> {
   const { userId } = await auth();
   if (!userId) {
     throw new Error("Unauthorized");
@@ -11,8 +12,8 @@ export async function checkAdmin() {
     where: { clerkUserId: userId },
   });
 
-  if (!user || user.role !== "admin") {
-    const error = new Error("Forbidden: Admin access required");
+  if (!user || (user as any).role !== "admin") {
+    const error: any = new Error("Forbidden: Admin access required");
     error.status = 403;
     throw error;
   }
