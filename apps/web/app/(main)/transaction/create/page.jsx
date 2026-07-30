@@ -8,12 +8,15 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft, Loader2, Receipt } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useEffect } from "react";
 
 export default function CreateTransactionPage() {
   const router = useRouter();
   const [type, setType] = useState("EXPENSE");
   
   const [formData, setFormData] = useState({
+    accountId: "",
     amount: "",
     description: "",
     category: "",
@@ -31,6 +34,12 @@ export default function CreateTransactionPage() {
     }
   });
 
+  useEffect(() => {
+    if (accounts && accounts.length > 0 && !formData.accountId) {
+      setFormData((prev) => ({ ...prev, accountId: accounts[0].id }));
+    }
+  }, [accounts]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!accounts || accounts.length === 0) {
@@ -38,8 +47,13 @@ export default function CreateTransactionPage() {
       return;
     }
     
+    if (!formData.accountId) {
+      toast.error("Please select an account");
+      return;
+    }
+    
     createTx.mutate({
-      accountId: accounts[0].id, // Using first account for simplicity in this example
+      accountId: formData.accountId,
       type,
       amount: parseFloat(formData.amount),
       description: formData.description,
@@ -80,6 +94,25 @@ export default function CreateTransactionPage() {
 
         <form onSubmit={handleSubmit}>
           <CardContent className="p-8 space-y-6">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Account</label>
+              <Select 
+                value={formData.accountId} 
+                onValueChange={(val) => setFormData({...formData, accountId: val})}
+              >
+                <SelectTrigger className="h-12 rounded-xl bg-secondary/50 border-transparent focus:ring-primary">
+                  <SelectValue placeholder="Select Account" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts && accounts.map((acc) => (
+                    <SelectItem key={acc.id} value={acc.id}>
+                      {acc.name} (${parseFloat(acc.balance).toFixed(2)})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">Amount</label>
               <div className="relative">
