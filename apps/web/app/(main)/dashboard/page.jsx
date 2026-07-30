@@ -8,10 +8,12 @@ import { Progress } from "@/components/ui/progress";
 import { ArrowDownRight, ArrowUpRight, Plus, Wallet, ReceiptText, TrendingUp, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TransactionTable } from "@/components/transaction-table";
 
 export default function DashboardPage() {
   const [accounts, setAccounts] = useState(null);
   const [transactions, setTransactions] = useState(null);
+  const [allTransactions, setAllTransactions] = useState(null);
   const [nextCursor, setNextCursor] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -20,9 +22,11 @@ export default function DashboardPage() {
     async function loadDashboardData() {
       setIsLoading(true);
       // Fetch data concurrently via Server Actions
-      const [accountsResponse, transactionsResponse] = await Promise.all([
+      const { getDashboardData } = await import("@/actions/dashboard");
+      const [accountsResponse, transactionsResponse, dashboardDataResponse] = await Promise.all([
         getUserAccounts(),
         getUserTransactions(null, 10),
+        getDashboardData(),
       ]);
 
       if (accountsResponse?.success) {
@@ -36,6 +40,12 @@ export default function DashboardPage() {
         setNextCursor(transactionsResponse.data.nextCursor);
       } else if (transactionsResponse) {
         console.error("Failed to load transactions:", transactionsResponse.error);
+      }
+      
+      if (dashboardDataResponse?.success) {
+        setAllTransactions(dashboardDataResponse.data);
+      } else if (dashboardDataResponse) {
+        console.error("Failed to load dashboard data:", dashboardDataResponse.error);
       }
       
       setIsLoading(false);
@@ -58,6 +68,23 @@ export default function DashboardPage() {
   };
 
   const totalBalance = accounts?.reduce((sum, acc) => sum + Number(acc.balance), 0) || 0;
+  
+  // Calculate income and expenses for current month
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  
+  const currentMonthTransactions = allTransactions?.filter(tx => {
+    const txDate = new Date(tx.date || tx.createdAt);
+    return txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear;
+  }) || [];
+  
+  const totalIncome = currentMonthTransactions
+    .filter(tx => tx.type === "INCOME")
+    .reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
+    
+  const totalExpenses = currentMonthTransactions
+    .filter(tx => tx.type === "EXPENSE")
+    .reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
   
   if (isLoading) {
     return (
@@ -111,7 +138,7 @@ export default function DashboardPage() {
                 <ArrowUpRight className="h-4 w-4 text-emerald-500" />
               </div>
             </div>
-            <CardTitle className="text-2xl font-bold tracking-tight">$0.00</CardTitle>
+            <CardTitle className="text-2xl font-bold tracking-tight text-emerald-600">${totalIncome.toFixed(2)}</CardTitle>
           </CardHeader>
         </Card>
 
@@ -123,7 +150,7 @@ export default function DashboardPage() {
                 <ArrowDownRight className="h-4 w-4 text-rose-500" />
               </div>
             </div>
-            <CardTitle className="text-2xl font-bold tracking-tight">$0.00</CardTitle>
+            <CardTitle className="text-2xl font-bold tracking-tight text-rose-600">${totalExpenses.toFixed(2)}</CardTitle>
           </CardHeader>
         </Card>
       </div>
@@ -151,15 +178,7 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="p-6">
-                 {/* Transaction list would go here */}
-                 <p className="text-sm text-muted-foreground">Transactions loaded: {transactions?.length}</p>
-                 <ul>
-                    {transactions.map(tx => (
-                      <li key={tx.id} className="py-2 border-b last:border-0 border-border/10">
-                        {tx.description} - ${tx.amount}
-                      </li>
-                    ))}
-                  </ul>
+                 <TransactionTable transactions={transactions} />
                   {nextCursor && (
                     <div className="mt-6 flex justify-center">
                       <Button variant="outline" onClick={loadMoreTransactions} disabled={isLoadingMore} className="rounded-full">
@@ -186,16 +205,18 @@ export default function DashboardPage() {
                 <div className="flex items-end justify-between">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Spent this month</p>
-                    <p className="text-3xl font-bold mt-1">$0.00</p>
+                    <p className="text-3xl font-bold mt-1">${totalExpenses.toFixed(2)}</p>
                   </div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">of $1,000.00</p>
                 </div>
-                <Progress value={0} className="h-3 rounded-full bg-secondary" />
-                <p className="text-xs text-muted-foreground pt-1">0% used. You're doing great!</p>
+                <Progress value={Math.min((totalExpenses / 1000) * 100, 100)} className="h-3 rounded-full bg-secondary" />
+                <p className="text-xs text-muted-foreground pt-1">{((totalExpenses / 1000) * 100).toFixed(1)}% used. {totalExpenses > 1000 ? "You're over budget!" : "You're doing great!"}</p>
               </div>
               
               <div className="pt-4 border-t border-border/50">
-                <Button variant="secondary" className="w-full rounded-full">Adjust Budget</Button>
+                <Link href="/settings" className="w-full">
+                  <Button variant="secondary" className="w-full rounded-full">Adjust Budget</Button>
+                </Link>
               </div>
             </div>
           </CardContent>

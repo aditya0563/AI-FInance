@@ -8,12 +8,17 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft, Loader2, Receipt } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useEffect, useRef } from "react";
 
 export default function CreateTransactionPage() {
   const router = useRouter();
   const [type, setType] = useState("EXPENSE");
+  const fileInputRef = useRef(null);
+  const [isScanning, setIsScanning] = useState(false);
   
   const [formData, setFormData] = useState({
+    accountId: "",
     amount: "",
     description: "",
     category: "",
@@ -31,6 +36,12 @@ export default function CreateTransactionPage() {
     }
   });
 
+  useEffect(() => {
+    if (accounts && accounts.length > 0 && !formData.accountId) {
+      setFormData((prev) => ({ ...prev, accountId: accounts[0].id }));
+    }
+  }, [accounts]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!accounts || accounts.length === 0) {
@@ -38,14 +49,52 @@ export default function CreateTransactionPage() {
       return;
     }
     
+    if (!formData.accountId) {
+      toast.error("Please select an account");
+      return;
+    }
+    
     createTx.mutate({
-      accountId: accounts[0].id, // Using first account for simplicity in this example
+      accountId: formData.accountId,
       type,
       amount: parseFloat(formData.amount),
       description: formData.description,
       category: formData.category || "General",
       date: new Date(formData.date),
     });
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsScanning(true);
+      const formDataUpload = new FormData();
+      formDataUpload.append("file", file);
+
+      const { scanReceipt } = await import("@/actions/transaction");
+      const result = await scanReceipt(formDataUpload);
+
+      if (result?.success) {
+        toast.success("Receipt scanned successfully!");
+        const extracted = result.data;
+        setFormData(prev => ({
+          ...prev,
+          amount: extracted.amount ? String(extracted.amount) : prev.amount,
+          description: extracted.description || prev.description,
+          category: extracted.category || prev.category,
+          date: extracted.date ? new Date(extracted.date).toISOString().split("T")[0] : prev.date
+        }));
+      } else {
+        toast.error(result?.error || "Failed to scan receipt");
+      }
+    } catch (err) {
+      toast.error("An error occurred during scanning");
+    } finally {
+      setIsScanning(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   return (
@@ -80,6 +129,25 @@ export default function CreateTransactionPage() {
 
         <form onSubmit={handleSubmit}>
           <CardContent className="p-8 space-y-6">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Account</label>
+              <Select 
+                value={formData.accountId} 
+                onValueChange={(val) => setFormData({...formData, accountId: val})}
+              >
+                <SelectTrigger className="h-12 rounded-xl bg-secondary/50 border-transparent focus:ring-primary">
+                  <SelectValue placeholder="Select Account" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts && accounts.map((acc) => (
+                    <SelectItem key={acc.id} value={acc.id}>
+                      {acc.name} (${parseFloat(acc.balance).toFixed(2)})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">Amount</label>
               <div className="relative">
@@ -138,7 +206,30 @@ export default function CreateTransactionPage() {
                   <p className="text-xs text-muted-foreground">Let AI extract the details for you.</p>
                 </div>
               </div>
-              <Button type="button" variant="outline" size="sm" className="rounded-full">Upload</Button>
+              <input 
+                type="file" 
+                accept="image/*" 
+                className="hidden" 
+                ref={fileInputRef} 
+                onChange={handleFileUpload} 
+              />
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm" 
+                className="rounded-full"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isScanning}
+              >
+                {isScanning ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Scanning...
+                  </>
+                ) : (
+                  "Upload"
+                )}
+              </Button>
             </div>
           </CardContent>
 

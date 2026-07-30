@@ -4,6 +4,7 @@ import { UserButton } from "@clerk/nextjs";
 import { LayoutDashboard, Receipt, Settings, Wallet } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { MobileNav } from "@/components/mobile-nav";
 
 const sidebarLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -64,6 +65,7 @@ export default function MainLayout({ children }) {
         {/* Mobile Header */}
         <header className="flex h-16 items-center justify-between border-b border-border/50 bg-background/50 px-4 backdrop-blur-xl md:hidden">
           <div className="flex items-center gap-2">
+            <MobileNav sidebarLinks={sidebarLinks} />
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
               W
             </div>

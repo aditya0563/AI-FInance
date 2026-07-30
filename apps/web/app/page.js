@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Shield, Zap, BarChart3 } from "lucide-react";
+import { ArrowRight, Zap } from "lucide-react";
+import { featuresData, howItWorksData, testimonialsData, statsData } from "@/data/landing";
 
 export default function LandingPage() {
   return (
@@ -62,20 +63,73 @@ export default function LandingPage() {
         </div>
       </main>
       
-      {/* Features section peek */}
-      <div className="container mx-auto px-4 pb-24 z-10 opacity-0 animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
+      {/* Stats section */}
+      <div className="container mx-auto px-4 py-12 z-10 opacity-0 animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center border-y border-border/20 py-10 bg-secondary/10 backdrop-blur-sm rounded-3xl">
+          {statsData.map((stat, i) => (
+            <div key={i} className="space-y-2">
+              <h4 className="text-4xl font-bold text-primary">{stat.value}</h4>
+              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{stat.label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Features section */}
+      <div className="container mx-auto px-4 py-24 z-10 opacity-0 animate-fade-in-up" style={{ animationDelay: "0.3s" }}>
+        <div className="text-center mb-16 space-y-4">
+          <h2 className="text-3xl md:text-5xl font-bold">Everything you need</h2>
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">Powerful features to help you manage your finances with ease.</p>
+        </div>
         <div className="grid md:grid-cols-3 gap-8">
-          {[
-            { icon: Shield, title: "Bank-Grade Security", desc: "Your data is encrypted and securely stored." },
-            { icon: BarChart3, title: "Real-Time Insights", desc: "Visualize your spending patterns instantly." },
-            { icon: Zap, title: "AI Categorization", desc: "Transactions are automatically categorized." }
-          ].map((feature, i) => (
-            <div key={i} className="flex flex-col items-center text-center p-8 rounded-3xl bg-secondary/20 border border-border/30 backdrop-blur-sm">
+          {featuresData.map((feature, i) => (
+            <div key={i} className="flex flex-col items-center text-center p-8 rounded-3xl bg-secondary/20 border border-border/30 backdrop-blur-sm hover:bg-secondary/30 transition-colors">
               <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
-                <feature.icon className="h-7 w-7 text-primary" />
+                {feature.icon}
               </div>
               <h3 className="text-xl font-semibold mb-3">{feature.title}</h3>
-              <p className="text-muted-foreground">{feature.desc}</p>
+              <p className="text-muted-foreground">{feature.description}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      {/* How it works */}
+      <div className="container mx-auto px-4 py-24 z-10 opacity-0 animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
+        <div className="text-center mb-16 space-y-4">
+          <h2 className="text-3xl md:text-5xl font-bold">How it works</h2>
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">Get started in three simple steps.</p>
+        </div>
+        <div className="grid md:grid-cols-3 gap-8">
+          {howItWorksData.map((step, i) => (
+            <div key={i} className="flex flex-col items-center text-center p-8">
+              <div className="h-20 w-20 rounded-full bg-blue-600/10 flex items-center justify-center mb-6 border border-blue-600/20">
+                {step.icon}
+              </div>
+              <h3 className="text-xl font-semibold mb-3">{step.title}</h3>
+              <p className="text-muted-foreground">{step.description}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      {/* Testimonials */}
+      <div className="container mx-auto px-4 py-24 pb-32 z-10 opacity-0 animate-fade-in-up" style={{ animationDelay: "0.5s" }}>
+        <div className="text-center mb-16 space-y-4">
+          <h2 className="text-3xl md:text-5xl font-bold">Loved by thousands</h2>
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">Here's what our users have to say about Welth.</p>
+        </div>
+        <div className="grid md:grid-cols-3 gap-8">
+          {testimonialsData.map((testimonial, i) => (
+            <div key={i} className="flex flex-col p-8 rounded-3xl bg-secondary/20 border border-border/30 backdrop-blur-sm">
+              <p className="text-muted-foreground mb-8 flex-1 italic">"{testimonial.quote}"</p>
+              <div className="flex items-center gap-4">
+                <img src={testimonial.image} alt={testimonial.name} className="h-12 w-12 rounded-full object-cover" />
+                <div>
+                  <h4 className="font-semibold">{testimonial.name}</h4>
+                  <p className="text-sm text-muted-foreground">{testimonial.role}</p>
+                </div>
+              </div>
             </div>
           ))}
         </div>
