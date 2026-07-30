@@ -1,7 +1,8 @@
 import arcjet, { tokenBucket } from "@arcjet/next";
+import { env } from "@/lib/env";
 
 const aj = arcjet({
-  key: process.env.ARCJET_KEY,
+  key: env.ARCJET_KEY!,
   characteristics: ["userId"], // Track based on Clerk userId
   rules: [
     // Rate limiting specifically for collection creation

@@ -2,8 +2,9 @@
 
 import { db } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
+import { Prisma } from "@prisma/client";
 
-const serializeTransaction = (obj) => {
+const serializeTransaction = (obj: any) => {
   const serialized = { ...obj };
   if (obj.balance) {
     serialized.balance = obj.balance.toNumber();
@@ -14,18 +15,18 @@ const serializeTransaction = (obj) => {
   return serialized;
 };
 
-export async function getUserTransactions(cursor = null, limit = 10) {
+export async function getUserTransactions(cursor: string | null = null, limit: number = 10): Promise<{ success: boolean; data?: any; error?: string }> {
   try {
     const { userId } = await auth();
-    if (!userId) throw new Error("Unauthorized");
+    if (!userId) return { success: false, error: "Unauthorized" };
 
     const user = await db.user.findUnique({
       where: { clerkUserId: userId },
     });
 
-    if (!user) throw new Error("User not found");
+    if (!user) return { success: false, error: "User not found" };
 
-    const queryOptions = {
+    const queryOptions: Prisma.TransactionFindManyArgs = {
       where: { userId: user.id },
       orderBy: { date: "desc" },
       take: limit + 1, // Fetch one extra to determine if there are more
@@ -52,8 +53,8 @@ export async function getUserTransactions(cursor = null, limit = 10) {
         nextCursor,
       }
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to fetch transactions:", error);
-    return { success: false, error: error.message };
+    return { success: false, error: "An unexpected error occurred while fetching transactions." };
   }
 }

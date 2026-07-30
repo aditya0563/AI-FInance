@@ -26,19 +26,19 @@ const CATEGORIES = {
 };
 
 // Helper to generate random amount within a range
-function getRandomAmount(min, max) {
+function getRandomAmount(min: number, max: number): number {
   return Number((Math.random() * (max - min) + min).toFixed(2));
 }
 
 // Helper to get random category with amount
-function getRandomCategory(type) {
+function getRandomCategory(type: "INCOME" | "EXPENSE") {
   const categories = CATEGORIES[type];
   const category = categories[Math.floor(Math.random() * categories.length)];
   const amount = getRandomAmount(category.range[0], category.range[1]);
   return { category: category.name, amount };
 }
 
-export async function seedTransactions() {
+export async function seedTransactions(): Promise<{ success: boolean; data?: any; error?: string }> {
   try {
     // Dynamically fetch or create a test user
     let user = await db.user.findFirst();
@@ -130,10 +130,10 @@ export async function seedTransactions() {
 
     return {
       success: true,
-      message: `Created ${transactions.length} transactions`,
+      data: `Created ${transactions.length} transactions`,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error seeding transactions:", error);
-    return { success: false, error: error.message };
+    return { success: false, error: "An unexpected error occurred while seeding transactions." };
   }
 }

@@ -1,4 +1,4 @@
-export const serializeDecimal = (obj) => {
+export const serializeDecimal = (obj: any): any => {
   const serialized = { ...obj };
   
   if (obj.balance !== undefined && obj.balance !== null) {
@@ -12,7 +12,7 @@ export const serializeDecimal = (obj) => {
   return serialized;
 };
 
-export function calculateNextRecurringDate(date, interval) {
+export function calculateNextRecurringDate(date: Date, interval: string): Date {
   const next = new Date(date);
   switch (interval) {
     case "DAILY":

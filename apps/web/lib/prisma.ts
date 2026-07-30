@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { env } from "@/lib/env";
 
 const prismaClientSingleton = () => {
   const prisma = new PrismaClient();
@@ -6,7 +7,7 @@ const prismaClientSingleton = () => {
   return prisma.$extends({
     query: {
       $allModels: {
-        async $allOperations({ model, operation, args, query }) {
+        async $allOperations({ model, operation, args, query }: any) {
           const modelsWithSoftDelete = ["User", "Account", "Transaction", "Budget"];
           
           if (modelsWithSoftDelete.includes(model) && args) {
@@ -16,7 +17,7 @@ const prismaClientSingleton = () => {
           }
           return query(args);
         },
-        async delete({ model, args, query }) {
+        async delete({ model, args, query }: any) {
           const modelsWithSoftDelete = ["User", "Account", "Transaction", "Budget"];
           if (modelsWithSoftDelete.includes(model)) {
             return prisma[model].update({
@@ -26,7 +27,7 @@ const prismaClientSingleton = () => {
           }
           return query(args);
         },
-        async deleteMany({ model, args, query }) {
+        async deleteMany({ model, args, query }: any) {
           const modelsWithSoftDelete = ["User", "Account", "Transaction", "Budget"];
           if (modelsWithSoftDelete.includes(model)) {
             return prisma[model].updateMany({
@@ -41,8 +42,8 @@ const prismaClientSingleton = () => {
   });
 };
 
-export const db = globalThis.prisma || prismaClientSingleton();
+export const db = (globalThis as any).prisma || prismaClientSingleton();
 
-if (process.env.NODE_ENV !== "production") {
-  globalThis.prisma = db;
+if (env.NODE_ENV !== "production") {
+  (globalThis as any).prisma = db;
 }
