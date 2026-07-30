@@ -58,3 +58,63 @@ export async function getUserTransactions(cursor: string | null = null, limit: n
     return { success: false, error: "An unexpected error occurred while fetching transactions." };
   }
 }
+
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+export async function scanReceipt(formData: FormData): Promise<{ success: boolean; data?: any; error?: string }> {
+  try {
+    const { userId } = await auth();
+    if (!userId) return { success: false, error: "Unauthorized" };
+
+    const file = formData.get("file") as File;
+    if (!file) return { success: false, error: "No file provided" };
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      // Mock data if no API key is provided
+      return { 
+        success: true, 
+        data: { 
+          amount: 42.50, 
+          description: "Mock Receipt (No API Key)", 
+          category: "Food", 
+          date: new Date().toISOString() 
+        } 
+      };
+    }
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const arrayBuffer = await file.arrayBuffer();
+    const base64Data = Buffer.from(arrayBuffer).toString("base64");
+
+    const prompt = `Analyze this receipt and extract the following information in JSON format:
+    {
+      "amount": (total amount as number),
+      "description": (merchant name or brief description),
+      "category": (one word category like Food, Travel, Groceries, Utilities, etc.),
+      "date": (ISO date string of the receipt date)
+    }
+    Only return the JSON object, without markdown formatting.`;
+
+    const result = await model.generateContent([
+      {
+        inlineData: {
+          data: base64Data,
+          mimeType: file.type || "image/jpeg",
+        },
+      },
+      prompt,
+    ]);
+
+    const text = result.response.text();
+    const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    const data = JSON.parse(cleanJson);
+
+    return { success: true, data };
+  } catch (error: any) {
+    console.error("Failed to scan receipt:", error);
+    return { success: false, error: "Failed to process receipt image." };
+  }
+}
